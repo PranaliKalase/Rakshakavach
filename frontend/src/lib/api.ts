@@ -113,9 +113,9 @@ export async function createRecommendation(payload: CreateRecommendationPayload,
       throw new Error(`Recommendation submission failed (${res.status}): ${errText}`);
     }
     return await res.json();
-  } catch (err) {
+  } catch (err: any) {
     console.error("API error in createRecommendation:", err);
-    throw err;
+    throw new Error(err?.message && err.message !== "Failed to fetch" ? err.message : "Unable to connect to RAKSHKAVACH Backend API (http://localhost:8000). Please check your connection.");
   }
 }
 
