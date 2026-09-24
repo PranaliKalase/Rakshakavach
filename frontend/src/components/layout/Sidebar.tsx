@@ -25,7 +25,8 @@ import {
   CheckCircle2,
   Settings,
   Building2,
-  Clock
+  Clock,
+  ClipboardCheck
 } from 'lucide-react';
 import { UserProfile } from '@/types/user';
 
@@ -160,6 +161,105 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, isOpen = false, o
                     { name: 'Digital Audit Room', path: '/dashboard/district-authority/audit-room', icon: FileCheck2 },
                     { name: 'Notifications', path: '/dashboard/implementing-agency?tab=notifications', icon: Bell, badge: '4' },
                     { name: 'Settings', path: '/dashboard/implementing-agency?tab=settings', icon: Settings },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.path}
+                        onClick={onClose}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-all"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className="w-4 h-4 text-gray-400" />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : pathname.startsWith('/dashboard/monitoring-officer') ? (
+            <>
+              {/* MAIN SECTION */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-300/70 px-3 mb-1.5">MAIN</p>
+                <div className="space-y-1">
+                  {[
+                    { name: 'Dashboard', path: '/dashboard/monitoring-officer', icon: LayoutDashboard },
+                    { name: 'Verification Queue', path: '/dashboard/monitoring-officer?tab=queue', icon: CheckSquare, badge: 'High Priority' },
+                    { name: 'My Inspections', path: '/dashboard/monitoring-officer?tab=inspections', icon: ClipboardCheck },
+                    { name: 'Project Map', path: '/dashboard/monitoring-officer?tab=map', icon: Map },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.path}
+                        onClick={onClose}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-all"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className="w-4 h-4 text-blue-300" />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* VERIFICATION SECTION */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-300/70 px-3 mb-1.5">VERIFICATION</p>
+                <div className="space-y-1">
+                  {[
+                    { name: 'Evidence Review', path: '/dashboard/monitoring-officer?tab=evidence', icon: Upload, badge: 'Review' },
+                    { name: 'Inspection Reports', path: '/dashboard/monitoring-officer?tab=reports', icon: FileText },
+                    { name: 'Verification Responses', path: '/dashboard/monitoring-officer?tab=responses', icon: MessageSquare, badge: '2' },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.path}
+                        onClick={onClose}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-all"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className="w-4 h-4 text-emerald-400" />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* AUDIT & SUPPORT SECTION */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-300/70 px-3 mb-1.5">AUDIT & SUPPORT</p>
+                <div className="space-y-1">
+                  {[
+                    { name: 'Digital Audit Room', path: '/dashboard/district-authority/audit-room', icon: FileCheck2 },
+                    { name: 'Notifications', path: '/dashboard/monitoring-officer?tab=notifications', icon: Bell, badge: '3' },
+                    { name: 'Settings', path: '/dashboard/monitoring-officer?tab=settings', icon: Settings },
                   ].map((item) => {
                     const Icon = item.icon;
                     return (
