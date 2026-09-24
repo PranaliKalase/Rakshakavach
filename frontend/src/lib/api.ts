@@ -378,8 +378,67 @@ export function normalizeProject(p: any): Project {
     explanation: p.explanation || "",
     latitude: p.latitude ? Number(p.latitude) : 21.3554,
     longitude: p.longitude ? Number(p.longitude) : 72.7368,
+    evidenceCount: p.evidence_count || (p.evidence_files ? p.evidence_files.length : 8),
+    documentCount: p.document_count || (p.documents ? p.documents.length : 4),
     provenance: p.provenance || "OFFICIAL",
     createdAt: p.created_at || p.createdAt || new Date().toISOString(),
     updatedAt: p.updated_at || p.updatedAt || new Date().toISOString()
   };
 }
+
+export async function updateProjectProgress(projectId: string, payload: {
+  physical_progress: number;
+  financial_progress: number;
+  actual_expenditure: number;
+  milestone?: string;
+  remarks?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/progress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Progress update failed: ${errText}`);
+  }
+  return await res.json();
+}
+
+export async function submitProjectEvidence(projectId: string, payload: {
+  file_name?: string;
+  evidence_type?: string;
+  description?: string;
+  location?: string;
+  uploaded_by?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/evidence`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Evidence submission failed: ${errText}`);
+  }
+  return await res.json();
+}
+
+export async function submitVerificationResponse(projectId: string, payload: {
+  query_id?: string;
+  response_text: string;
+  supporting_evidence_id?: string;
+  submitted_by?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/verification-response`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Verification response submission failed: ${errText}`);
+  }
+  return await res.json();
+}
+

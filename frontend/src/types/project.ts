@@ -38,6 +38,8 @@ export interface Project {
   explanation?: string;
   latitude?: number;
   longitude?: number;
+  evidenceCount?: number;
+  documentCount?: number;
   provenance?: string;
   createdAt: string;
   updatedAt: string;
