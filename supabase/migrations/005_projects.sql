@@ -1,0 +1,26 @@
+-- 005_projects.sql
+CREATE TABLE IF NOT EXISTS projects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    project_code VARCHAR(50) UNIQUE NOT NULL,
+    work_name TEXT NOT NULL,
+    description TEXT,
+    district_id UUID REFERENCES districts(id) NOT NULL,
+    constituency_id UUID REFERENCES constituencies(id) NOT NULL,
+    agency_id UUID REFERENCES agencies(id),
+    sector VARCHAR(100) NOT NULL,
+    estimated_cost NUMERIC(15, 2) NOT NULL CHECK (estimated_cost >= 0),
+    sanctioned_cost NUMERIC(15, 2) CHECK (sanctioned_cost >= 0),
+    actual_expenditure NUMERIC(15, 2) DEFAULT 0.00 CHECK (actual_expenditure >= 0),
+    physical_progress NUMERIC(5, 2) DEFAULT 0.00 CHECK (physical_progress BETWEEN 0 AND 100),
+    financial_progress NUMERIC(5, 2) DEFAULT 0.00 CHECK (financial_progress BETWEEN 0 AND 100),
+    status project_status NOT NULL DEFAULT 'RECOMMENDED',
+    priority verification_priority NOT NULL DEFAULT 'NORMAL',
+    trust_score NUMERIC(5, 2) DEFAULT 100.00 CHECK (trust_score BETWEEN 0 AND 100),
+    latitude NUMERIC(10, 7),
+    longitude NUMERIC(10, 7),
+    recommended_by UUID REFERENCES profiles(id),
+    expected_completion_date DATE,
+    sanction_date DATE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
