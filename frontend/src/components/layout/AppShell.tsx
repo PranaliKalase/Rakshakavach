@@ -12,39 +12,31 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
+function getInitialUser(path: string): UserProfile {
+  if (path.includes('/dashboard/mp')) return DEMO_USERS.MP;
+  if (path.includes('/dashboard/district-authority')) return DEMO_USERS.DISTRICT_AUTHORITY;
+  if (path.includes('/dashboard/monitoring-officer')) return DEMO_USERS.MONITORING_OFFICER;
+  if (path.includes('/dashboard/implementing-agency')) return DEMO_USERS.IMPLEMENTING_AGENCY;
+  if (path.includes('/dashboard/ministry')) return DEMO_USERS.MINISTRY;
+  if (path.startsWith('/admin') || path.includes('/dashboard/admin')) return DEMO_USERS.ADMIN;
+  try {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('rakshakavach_user') : null;
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  return DEMO_USERS.DISTRICT_AUTHORITY;
+}
+
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const pathname = usePathname();
-  const [currentUser, setCurrentUser] = useState<UserProfile>(DEMO_USERS.DISTRICT_AUTHORITY);
+  const [currentUser, setCurrentUser] = useState<UserProfile>(() => getInitialUser(pathname));
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Auto-sync active user persona when navigating directly to role dashboards
-    if (pathname.includes('/dashboard/mp')) {
-      setCurrentUser(DEMO_USERS.MP);
-      try { localStorage.setItem('rakshakavach_user', JSON.stringify(DEMO_USERS.MP)); } catch(e){}
-    } else if (pathname.includes('/dashboard/district-authority')) {
-      setCurrentUser(DEMO_USERS.DISTRICT_AUTHORITY);
-      try { localStorage.setItem('rakshakavach_user', JSON.stringify(DEMO_USERS.DISTRICT_AUTHORITY)); } catch(e){}
-    } else if (pathname.includes('/dashboard/monitoring-officer')) {
-      setCurrentUser(DEMO_USERS.MONITORING_OFFICER);
-      try { localStorage.setItem('rakshakavach_user', JSON.stringify(DEMO_USERS.MONITORING_OFFICER)); } catch(e){}
-    } else if (pathname.includes('/dashboard/implementing-agency')) {
-      setCurrentUser(DEMO_USERS.IMPLEMENTING_AGENCY);
-      try { localStorage.setItem('rakshakavach_user', JSON.stringify(DEMO_USERS.IMPLEMENTING_AGENCY)); } catch(e){}
-    } else if (pathname.includes('/dashboard/ministry')) {
-      setCurrentUser(DEMO_USERS.MINISTRY);
-      try { localStorage.setItem('rakshakavach_user', JSON.stringify(DEMO_USERS.MINISTRY)); } catch(e){}
-    } else if (pathname.startsWith('/admin') || pathname.includes('/dashboard/admin')) {
-      setCurrentUser(DEMO_USERS.ADMIN);
-      try { localStorage.setItem('rakshakavach_user', JSON.stringify(DEMO_USERS.ADMIN)); } catch(e){}
-    } else {
-      try {
-        const stored = localStorage.getItem('rakshakavach_user');
-        if (stored) {
-          setCurrentUser(JSON.parse(stored));
-        }
-      } catch (e) {}
-    }
+    const user = getInitialUser(pathname);
+    setCurrentUser(user);
+    try {
+      localStorage.setItem('rakshakavach_user', JSON.stringify(user));
+    } catch (e) {}
   }, [pathname]);
 
   const handleLogout = () => {

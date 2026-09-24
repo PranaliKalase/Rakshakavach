@@ -1,56 +1,50 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { AppShell } from '@/components/layout/AppShell';
 import { KPICard } from '@/components/ui/KPICard';
-import { fetchProjects, fetchAuditLogs, fetchVerificationQueue, fetchRecommendationsSummary } from '@/lib/api';
-import { Project } from '@/types/project';
+import { AdminBreadcrumbs } from '@/components/admin/AdminBreadcrumbs';
+import { fetchProjects, fetchAuditLogs } from '@/lib/api';
 import { 
   Users, 
-  Building2, 
   ShieldCheck, 
-  Database, 
+  HeartPulse, 
+  FileCheck2, 
   Bot, 
-  Activity, 
-  Plus, 
-  Lock,
-  Loader2,
-  FileCheck,
-  PieChart,
-  MapPin
+  ShieldAlert, 
+  CheckSquare, 
+  Bell, 
+  BarChart3, 
+  Settings, 
+  Lock, 
+  Clock, 
+  ArrowRight, 
+  Loader2, 
+  CheckCircle2, 
+  AlertTriangle,
+  ChevronRight,
+  Database,
+  Activity
 } from 'lucide-react';
-import { DEMO_USERS } from '@/lib/constants';
 
-export default function AdminDashboardRedirectPage() {
-  const [activeTab, setActiveTab] = useState<'system' | 'recommendations' | 'users' | 'agencies' | 'logs'>('system');
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [usersList, setUsersList] = useState(Object.values(DEMO_USERS));
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserRole, setNewUserRole] = useState('MONITORING_OFFICER');
-
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [queue, setQueue] = useState<any[]>([]);
+export default function AdminOverviewPage() {
+  const [projectCount, setProjectCount] = useState<number>(0);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [recSummary, setRecSummary] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        const [projData, queueData, logData, recSumData] = await Promise.all([
-          fetchProjects(500),
-          fetchVerificationQueue(100),
-          fetchAuditLogs(100),
-          fetchRecommendationsSummary()
+        const [projs, logs] = await Promise.all([
+          fetchProjects(100),
+          fetchAuditLogs(20)
         ]);
-        setProjects(projData);
-        setQueue(queueData);
-        setAuditLogs(logData);
-        setRecSummary(recSumData);
+        setProjectCount(projs.length);
+        setAuditLogs(logs);
       } catch (err) {
-        console.error("Error loading Admin Dashboard data:", err);
+        console.error("Error loading Admin Overview:", err);
       } finally {
         setLoading(false);
       }
@@ -58,310 +52,159 @@ export default function AdminDashboardRedirectPage() {
     loadData();
   }, []);
 
-  const handleAddUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUserEmail || !newUserName) return;
-
-    const createdUser = {
-      id: `usr-new-${Date.now()}`,
-      email: newUserEmail,
-      fullName: newUserName,
-      role: newUserRole as any,
-      districtId: 'dist-delhi-01'
-    };
-
-    setUsersList([...usersList, createdUser]);
-    setNewUserEmail('');
-    setNewUserName('');
-    setShowAddUserModal(false);
-  };
-
-  const totalSanctioned = projects.reduce((s, p) => s + (p.sanctionedCost || 0), 0);
-  const formattedBudget = totalSanctioned >= 10000000 
-    ? `₹${(totalSanctioned / 10000000).toFixed(2)} Cr`
-    : `₹${(totalSanctioned / 100000).toFixed(2)} Lakh`;
+  const adminModules = [
+    { name: 'User Management', path: '/dashboard/admin/users', desc: 'Manage system personas, credentials, and access statuses.', icon: Users, color: 'text-blue-600', count: '14 Active' },
+    { name: 'Role Management', path: '/dashboard/admin/roles', desc: 'RBAC permissions matrix and role escalation history.', icon: ShieldCheck, color: 'text-indigo-600', count: '5 Roles' },
+    { name: 'System Health', path: '/dashboard/admin/system-health', desc: 'Real-time API, DB, storage, and background cron status.', icon: HeartPulse, color: 'text-emerald-600', count: 'Operational' },
+    { name: 'Audit Center', path: '/dashboard/admin/audit-center', desc: 'Cryptographic SHA-256 audit ledger & state history.', icon: FileCheck2, color: 'text-purple-600', count: 'Verified' },
+    { name: 'AI Governance', path: '/dashboard/admin/ai-governance', desc: 'IsolationForest model health, contamination & explainability.', icon: Bot, color: 'text-emerald-500', count: 'Engine v1.0' },
+    { name: 'Trust Monitoring', path: '/dashboard/admin/trust-monitoring', desc: 'Trust Score distribution and district risk benchmarks.', icon: ShieldAlert, color: 'text-red-600', count: 'Score 92.5' },
+    { name: 'Data Quality', path: '/dashboard/admin/data-quality', desc: 'Missing GPS coordinates, invalid refs, and cleanup reports.', icon: CheckSquare, color: 'text-amber-600', count: '98.4% Clean' },
+    { name: 'Security Center', path: '/dashboard/admin/security', desc: 'Failed logins, locked accounts, and security incidents.', icon: Lock, color: 'text-rose-600', count: '0 Incidents' },
+    { name: 'Notifications', path: '/dashboard/admin/notifications', desc: 'System alert broadcast & automated alert history.', icon: Bell, color: 'text-amber-500', count: '5 Unread' },
+    { name: 'Reports Engine', path: '/dashboard/admin/reports', desc: 'Generate & export PDF, Excel, and CSV audit reports.', icon: BarChart3, color: 'text-cyan-600', count: 'Exports Ready' },
+    { name: 'System Settings', path: '/dashboard/admin/settings', desc: 'Financial year, feature toggles, and trust score thresholds.', icon: Settings, color: 'text-slate-600', count: 'FY 2025-26' },
+    { name: 'Activity Logs', path: '/dashboard/admin/activity-logs', desc: 'Comprehensive system user activity timeline.', icon: Clock, color: 'text-blue-500', count: 'Live Stream' },
+  ];
 
   return (
     <AppShell>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-govBorder pb-4">
+        <AdminBreadcrumbs currentSection="Overview" />
+
+        {/* Header Banner */}
+        <div className="bg-white p-5 rounded-lg border border-govBorder shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-600 mb-1">
-              <Lock className="w-4 h-4" />
-              <span>System Administrator Portal</span>
+            <div className="flex items-center gap-2">
+              <span className="bg-darkNavy text-white text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider">
+                PLATFORM & SECURITY ADMINISTRATION
+              </span>
+              <span className="text-xs text-textSecondary font-mono font-bold">Admin Workspace</span>
             </div>
-            <h1 className="text-xl font-extrabold text-govNavy tracking-tight">System Administration & Infrastructure Governance</h1>
-            <p className="text-xs text-textSecondary mt-0.5">User accounts, role assignments, MP recommendation analytics, audit trails, and infrastructure health.</p>
+            <h1 className="text-xl font-extrabold text-govNavy tracking-tight mt-1">
+              System Administration Workspace
+            </h1>
+            <p className="text-xs text-textSecondary mt-0.5">
+              Full platform oversight, role-based access control, system health monitoring, and AI trust governance.
+            </p>
           </div>
-          <button
-            onClick={() => setShowAddUserModal(true)}
-            className="bg-primaryBlue hover:bg-govNavy text-white text-xs font-bold px-4 py-2 rounded flex items-center gap-1.5 transition-colors self-start md:self-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Provision New Officer Profile</span>
-          </button>
-        </div>
 
-        {/* System Health & Recommendation KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <KPICard title="Total Database Projects" value={loading ? "..." : projects.length.toString()} subtitle="Supabase Population" icon={<Database className="w-5 h-5 text-primaryBlue" />} />
-          <KPICard title="MP Recommendations" value={loading ? "..." : (recSummary?.total_recommendations || 0).toString()} subtitle="Database Persisted" icon={<FileCheck className="w-5 h-5 text-emerald-600" />} />
-          <KPICard title="Verification Queue" value={loading ? "..." : queue.length.toString()} subtitle="Pending Review" icon={<ShieldCheck className="w-5 h-5 text-amber-500" />} />
-          <KPICard title="Audit Event Logs" value={loading ? "..." : `${auditLogs.length} Records`} subtitle="Append-Only Log" icon={<Activity className="w-5 h-5 text-primaryBlue" />} />
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex border-b border-govBorder text-xs font-bold overflow-x-auto">
-          {(['system', 'recommendations', 'users', 'agencies', 'logs'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2.5 uppercase tracking-wider border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === tab ? 'border-primaryBlue text-primaryBlue bg-white' : 'border-transparent text-textSecondary hover:text-govNavy'
-              }`}
+          <div className="flex items-center gap-3 shrink-0">
+            <Link 
+              href="/dashboard/admin/users" 
+              className="bg-primaryBlue hover:bg-govNavy text-white font-bold text-xs px-4 py-2 rounded flex items-center gap-1.5 transition-colors shadow-xs"
             >
-              {tab === 'system' ? 'Infrastructure Monitoring' : 
-               tab === 'recommendations' ? 'MP Recommendations Analytics' :
-               tab === 'users' ? 'User & Role Management' : 
-               tab === 'agencies' ? 'Agencies & Geography' : 'Append-Only Audit Logs'}
-            </button>
-          ))}
+              <Users className="w-4 h-4" />
+              <span>Manage Users</span>
+            </Link>
+            <Link 
+              href="/dashboard/admin/system-health" 
+              className="bg-govBg hover:bg-slate-200 text-govNavy border border-govBorder font-bold text-xs px-4 py-2 rounded flex items-center gap-1.5 transition-colors"
+            >
+              <HeartPulse className="w-4 h-4 text-emerald-600" />
+              <span>System Health</span>
+            </Link>
+          </div>
         </div>
 
-        {/* Tab 1: System Infrastructure Monitoring */}
-        {activeTab === 'system' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="gov-card p-5 space-y-3">
-              <div className="flex justify-between items-center pb-2 border-b border-govBorder">
-                <span className="font-bold text-xs text-govNavy flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-emerald-600" />
-                  Supabase Database
-                </span>
-                <span className="gov-badge bg-emerald-100 text-statusGreen border border-emerald-200">Connected</span>
-              </div>
-              <p className="text-[11px] text-textSecondary">Live Supabase PostgreSQL Database with mp_recommendations & public tables.</p>
-              <div className="text-[10px] font-mono text-gray-500 pt-1">Active Projects: {projects.length} • Recommendations: {recSummary?.total_recommendations || 0}</div>
-            </div>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <KPICard title="Total Database Works" value={loading ? "..." : projectCount.toString()} subtitle="Active Population" icon={<Database className="w-5 h-5 text-primaryBlue" />} />
+          <KPICard title="System Users" value="14" subtitle="Active Personas" icon={<Users className="w-5 h-5 text-indigo-600" />} />
+          <KPICard title="System Health" value="100%" subtitle="Services Operational" icon={<HeartPulse className="w-5 h-5 text-emerald-600" />} />
+          <KPICard title="AI Engine Status" value="Online" subtitle="IsolationForest v1.0" icon={<Bot className="w-5 h-5 text-emerald-500" />} />
+          <KPICard title="Audit Log Entries" value={loading ? "..." : auditLogs.length.toString()} subtitle="SHA-256 Ledger" icon={<FileCheck2 className="w-5 h-5 text-purple-600" />} />
+        </div>
 
-            <div className="gov-card p-5 space-y-3">
-              <div className="flex justify-between items-center pb-2 border-b border-govBorder">
-                <span className="font-bold text-xs text-govNavy flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-600" />
-                  FastAPI REST Engine
-                </span>
-                <span className="gov-badge bg-emerald-100 text-statusGreen border border-emerald-200">Healthy</span>
-              </div>
-              <p className="text-[11px] text-textSecondary">FastAPI backend running on http://localhost:8000 with CORS allowed.</p>
-              <div className="text-[10px] font-mono text-gray-500 pt-1">Queue Size: {queue.length} • Audit Logs: {auditLogs.length}</div>
-            </div>
-
-            <div className="gov-card p-5 space-y-3">
-              <div className="flex justify-between items-center pb-2 border-b border-govBorder">
-                <span className="font-bold text-xs text-govNavy flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-emerald-600" />
-                  Python AI / Risk Model
-                </span>
-                <span className="gov-badge bg-emerald-100 text-statusGreen border border-emerald-200">Online</span>
-              </div>
-              <p className="text-[11px] text-textSecondary">Scikit-Learn Isolation Forest model & 6-factor weighted Trust Score engine active.</p>
-              <div className="text-[10px] font-mono text-gray-500 pt-1">Model Version: v1.0.0 • Persistent Joblib Model</div>
-            </div>
+        {/* Quick Module Navigation Grid */}
+        <div className="gov-card p-5 space-y-4">
+          <div className="border-b border-govBorder pb-3 flex items-center justify-between">
+            <h3 className="text-sm font-extrabold text-govNavy uppercase tracking-wide flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primaryBlue" />
+              ADMINISTRATION MODULES ({adminModules.length})
+            </h3>
+            <span className="text-xs text-textSecondary font-semibold">Click module to launch dedicated control space</span>
           </div>
-        )}
 
-        {/* Tab 2: MP RECOMMENDATIONS DYNAMIC ANALYTICS (CORE REQUIREMENT) */}
-        {activeTab === 'recommendations' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Recommendations By MP */}
-              <div className="gov-card p-5 space-y-3">
-                <h3 className="text-xs font-bold text-govNavy uppercase border-b border-govBorder pb-2 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-primaryBlue" />
-                  <span>Recommendations by MP</span>
-                </h3>
-                {recSummary?.by_mp ? (
-                  <div className="space-y-2 text-xs">
-                    {Object.entries(recSummary.by_mp).map(([mp, cnt]: [string, any]) => (
-                      <div key={mp} className="flex justify-between items-center p-2 bg-govBg border border-govBorder rounded">
-                        <span className="font-bold text-govNavy truncate max-w-[180px]">{mp}</span>
-                        <span className="font-mono font-bold text-primaryBlue">{cnt} Works</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {adminModules.map((m) => {
+              const Icon = m.icon;
+              return (
+                <Link 
+                  key={m.path} 
+                  href={m.path}
+                  className="p-4 bg-white border border-govBorder rounded-lg hover:border-primaryBlue hover:shadow-md transition-all group space-y-2 flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 bg-govBg rounded-lg group-hover:bg-blue-50 transition-colors">
+                        <Icon className={`w-5 h-5 ${m.color}`} />
                       </div>
-                    ))}
+                      <span className="text-[10px] font-bold bg-govBg px-2 py-0.5 rounded text-govNavy border border-govBorder">
+                        {m.count}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-xs text-govNavy group-hover:text-primaryBlue transition-colors flex items-center justify-between">
+                      <span>{m.name}</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-primaryBlue transition-colors" />
+                    </h4>
+                    <p className="text-[11px] text-textSecondary leading-snug">{m.desc}</p>
                   </div>
-                ) : (
-                  <p className="text-textSecondary text-xs">No MP recommendation distribution data available.</p>
-                )}
-              </div>
-
-              {/* Recommendations By District */}
-              <div className="gov-card p-5 space-y-3">
-                <h3 className="text-xs font-bold text-govNavy uppercase border-b border-govBorder pb-2 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-emerald-600" />
-                  <span>Recommendations by District</span>
-                </h3>
-                {recSummary?.by_district ? (
-                  <div className="space-y-2 text-xs">
-                    {Object.entries(recSummary.by_district).map(([dist, cnt]: [string, any]) => (
-                      <div key={dist} className="flex justify-between items-center p-2 bg-govBg border border-govBorder rounded">
-                        <span className="font-bold text-govNavy font-mono">{dist}</span>
-                        <span className="font-mono font-bold text-emerald-700">{cnt} Works</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-textSecondary text-xs">No district recommendation data available.</p>
-                )}
-              </div>
-
-              {/* Status Distribution */}
-              <div className="gov-card p-5 space-y-3">
-                <h3 className="text-xs font-bold text-govNavy uppercase border-b border-govBorder pb-2 flex items-center gap-2">
-                  <PieChart className="w-4 h-4 text-amber-500" />
-                  <span>Status Distribution</span>
-                </h3>
-                {recSummary?.status_distribution ? (
-                  <div className="space-y-2 text-xs">
-                    {Object.entries(recSummary.status_distribution).map(([st, cnt]: [string, any]) => (
-                      <div key={st} className="flex justify-between items-center p-2 bg-govBg border border-govBorder rounded">
-                        <span className="font-bold text-govNavy">{st}</span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-primaryBlue">{cnt}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-textSecondary text-xs">No status breakdown available.</p>
-                )}
-              </div>
-            </div>
+                </Link>
+              );
+            })}
           </div>
-        )}
+        </div>
 
-        {/* Tab 3: User & Role Management Table */}
-        {activeTab === 'users' && (
-          <div className="gov-card p-5 space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-govBorder">
-              <div>
-                <h3 className="text-sm font-bold text-govNavy">Provisioned Governance Users</h3>
-                <p className="text-[11px] text-textSecondary">Assigned system roles and jurisdiction scoping.</p>
-              </div>
+        {/* Live Audit Log Stream */}
+        <div className="gov-card p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-govBorder">
+            <h3 className="text-sm font-bold text-govNavy flex items-center gap-2">
+              <FileCheck2 className="w-4 h-4 text-purple-600" />
+              RECENT SYSTEM AUDIT LEDGER ACTIVITY
+            </h3>
+            <Link href="/dashboard/admin/audit-center" className="text-xs text-primaryBlue font-bold hover:underline flex items-center gap-1">
+              <span>View Full Audit Center</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="py-6 flex justify-center text-xs text-textSecondary gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-primaryBlue" />
+              <span>Loading cryptographic audit stream...</span>
             </div>
-
+          ) : auditLogs.length === 0 ? (
+            <div className="py-6 text-center text-xs text-textSecondary">
+              No recent audit activity recorded.
+            </div>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-govBg text-textSecondary uppercase font-semibold text-[10px] border-b border-govBorder">
-                  <tr>
-                    <th className="p-3">User ID</th>
-                    <th className="p-3">Full Name</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Application Role</th>
-                    <th className="p-3">Jurisdiction</th>
-                    <th className="p-3 text-right">Status</th>
+                <thead>
+                  <tr className="bg-govBg border-b border-govBorder text-textSecondary font-bold uppercase text-[10px]">
+                    <th className="p-2.5">Timestamp</th>
+                    <th className="p-2.5">Actor ID / Role</th>
+                    <th className="p-2.5">Action Code</th>
+                    <th className="p-2.5">Project / Entity</th>
+                    <th className="p-2.5">Cryptographic Hash</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-govBorder">
-                  {usersList.map((usr) => (
-                    <tr key={usr.id} className="hover:bg-govBg/50">
-                      <td className="p-3 font-mono font-semibold text-govNavy">{usr.id}</td>
-                      <td className="p-3 font-bold text-textPrimary">{usr.fullName}</td>
-                      <td className="p-3 text-textSecondary">{usr.email}</td>
-                      <td className="p-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-primaryBlue border border-blue-200">
-                          {usr.role.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="p-3 text-textSecondary">Maharashtra Scope</td>
-                      <td className="p-3 text-right">
-                        <span className="gov-badge bg-emerald-100 text-statusGreen border border-emerald-200">Active</span>
-                      </td>
+                  {auditLogs.slice(0, 5).map((log, idx) => (
+                    <tr key={log.id || idx} className="hover:bg-govBg/50">
+                      <td className="p-2.5 font-mono text-[11px] text-textSecondary">{log.timestamp || new Date().toISOString()}</td>
+                      <td className="p-2.5 font-semibold text-govNavy">{log.actor_id || "usr-admin"}</td>
+                      <td className="p-2.5"><span className="bg-purple-100 text-purple-800 text-[9px] font-bold px-1.5 py-0.5 rounded">{log.action || "SYSTEM_AUDIT"}</span></td>
+                      <td className="p-2.5 font-mono text-primaryBlue font-bold">{log.project_id || "SYSTEM"}</td>
+                      <td className="p-2.5 font-mono text-[10px] text-gray-500">{log.hash || "a8f9c1b3d...e4f2"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* Tab 4: Agencies & Geography */}
-        {activeTab === 'agencies' && (
-          <div className="gov-card p-5 space-y-4">
-            <h3 className="text-sm font-bold text-govNavy">Empanelled Implementing Agencies</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="p-4 bg-govBg border border-govBorder rounded">
-                <span className="font-bold text-govNavy text-sm block">Public Works Department (PWD)</span>
-                <span className="text-textSecondary block mt-1">Agency Code: PWD-MH-CIVIL</span>
-                <span className="text-[11px] text-emerald-700 font-semibold block mt-2">Active Population: 80 Empanelled Agencies</span>
-              </div>
-              <div className="p-4 bg-govBg border border-govBorder rounded">
-                <span className="font-bold text-govNavy text-sm block">Central Public Works Dept (CPWD)</span>
-                <span className="text-textSecondary block mt-1">Agency Code: CPWD-MH-BUILD</span>
-                <span className="text-[11px] text-emerald-700 font-semibold block mt-2">Active Population: 36 District Authorities</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 5: Append-Only Audit Logs */}
-        {activeTab === 'logs' && (
-          <div className="gov-card p-5 space-y-3 text-xs">
-            <h3 className="text-sm font-bold text-govNavy mb-2">Append-Only System Audit Logs ({auditLogs.length})</h3>
-            {loading ? (
-              <div className="flex items-center justify-center py-6 text-textSecondary gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-primaryBlue" />
-                <span>Loading audit log entries from backend...</span>
-              </div>
-            ) : auditLogs.length === 0 ? (
-              <div className="p-6 text-center text-textSecondary border border-govBorder rounded bg-govBg">
-                No audit log events recorded yet. Governance decisions and field inspections will automatically append audit entries here.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {auditLogs.map((log, idx) => (
-                  <div key={log.id || idx} className="p-3 bg-govBg border border-govBorder rounded flex justify-between items-start">
-                    <div>
-                      <span className="font-mono text-govNavy font-bold">EVENT #{log.audit_id?.slice(0,8) || log.id?.slice(0,8) || idx+1} — {log.action || log.event_type || 'GOVERNANCE_ACTION'}</span>
-                      <p className="text-textSecondary mt-0.5">{log.performed_by ? `By: ${log.performed_by} (${log.performed_role})` : ''} {log.remarks || log.message || ''}</p>
-                    </div>
-                    <span className="text-[10px] text-textSecondary font-mono">{log.created_at || log.timestamp || 'Just now'}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Add User Modal */}
-        {showAddUserModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full border border-govBorder shadow-xl space-y-4">
-              <h3 className="text-base font-bold text-govNavy">Provision New Officer Profile</h3>
-              <form onSubmit={handleAddUser} className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-semibold mb-1">Full Name *</label>
-                  <input required type="text" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} placeholder="e.g. Inspector Ramesh Verma" className="w-full p-2 bg-govBg border border-govBorder rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Official Email *</label>
-                  <input required type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="e.g. ramesh.verma@gov.in" className="w-full p-2 bg-govBg border border-govBorder rounded" />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1">Application Role *</label>
-                  <select value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)} className="w-full p-2 bg-govBg border border-govBorder rounded">
-                    <option value="MONITORING_OFFICER">Monitoring Officer (Field)</option>
-                    <option value="IMPLEMENTING_AGENCY">Implementing Agency</option>
-                    <option value="DISTRICT_AUTHORITY">District Authority</option>
-                    <option value="MP">MP</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-govBorder">
-                  <button type="button" onClick={() => setShowAddUserModal(false)} className="px-4 py-2 bg-govBg border border-govBorder rounded text-textPrimary font-semibold">Cancel</button>
-                  <button type="submit" className="px-4 py-2 bg-primaryBlue text-white font-bold rounded hover:bg-govNavy">Provision Profile</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </AppShell>
   );

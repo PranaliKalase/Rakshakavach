@@ -26,7 +26,12 @@ import {
   Settings,
   Building2,
   Clock,
-  ClipboardCheck
+  ClipboardCheck,
+  Users,
+  Activity,
+  HeartPulse,
+  Lock,
+  Database
 } from 'lucide-react';
 import { UserProfile } from '@/types/user';
 
@@ -85,7 +90,158 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, isOpen = false, o
 
         {/* Navigation Links - All 100% Clickable & Redirecting */}
         <div className="flex-1 overflow-y-auto py-5 px-3 space-y-4">
-          {pathname.startsWith('/dashboard/implementing-agency') ? (
+          {pathname.startsWith('/dashboard/admin') || pathname.startsWith('/admin') ? (
+            <>
+              {/* ADMIN OVERVIEW */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-300/70 px-3 mb-1.5">ADMINISTRATION</p>
+                <div className="space-y-1">
+                  {[
+                    { name: 'Admin Overview', path: '/dashboard/admin', icon: LayoutDashboard },
+                    { name: 'User Management', path: '/dashboard/admin/users', icon: Users, badge: 'Active' },
+                    { name: 'Role Management', path: '/dashboard/admin/roles', icon: ShieldCheck },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        href={item.path}
+                        onClick={onClose}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          isActive 
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
+                            : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className="w-4 h-4 text-blue-300" />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* INTELLIGENCE & TRUST */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-300/70 px-3 mb-1.5">INTELLIGENCE & TRUST</p>
+                <div className="space-y-1">
+                  {[
+                    { name: 'AI Governance', path: '/dashboard/admin/ai-governance', icon: Bot, isCopilot: true },
+                    { name: 'Trust Monitoring', path: '/dashboard/admin/trust-monitoring', icon: ShieldAlert },
+                    { name: 'Data Quality', path: '/dashboard/admin/data-quality', icon: CheckSquare, badge: 'Alerts' },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        href={item.path}
+                        onClick={onClose}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          isActive 
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
+                            : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className={`w-4 h-4 ${item.isCopilot ? 'text-emerald-400' : 'text-amber-400'}`} />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* SYSTEM & AUDIT */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-300/70 px-3 mb-1.5">SYSTEM & AUDIT</p>
+                <div className="space-y-1">
+                  {[
+                    { name: 'System Health', path: '/dashboard/admin/system-health', icon: HeartPulse, badge: 'Live' },
+                    { name: 'Audit Center', path: '/dashboard/admin/audit-center', icon: FileCheck2 },
+                    { name: 'Security Center', path: '/dashboard/admin/security', icon: Lock, badge: 'Protected' },
+                    { name: 'Activity Logs', path: '/dashboard/admin/activity-logs', icon: Clock },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        href={item.path}
+                        onClick={onClose}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          isActive 
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
+                            : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className="w-4 h-4 text-emerald-400" />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* REPORTS & PLATFORM */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-300/70 px-3 mb-1.5">REPORTS & CONFIG</p>
+                <div className="space-y-1">
+                  {[
+                    { name: 'Notifications', path: '/dashboard/admin/notifications', icon: Bell, badge: '5' },
+                    { name: 'Reports Engine', path: '/dashboard/admin/reports', icon: BarChart3 },
+                    { name: 'System Settings', path: '/dashboard/admin/settings', icon: Settings },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        href={item.path}
+                        onClick={onClose}
+                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                          isActive 
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
+                            : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className="w-4 h-4 text-gray-400" />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : pathname.startsWith('/dashboard/implementing-agency') ? (
             <>
               {/* MAIN SECTION */}
               <div>
