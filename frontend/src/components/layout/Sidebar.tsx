@@ -503,10 +503,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, isOpen = false, o
               </Link>
 
               <Link
-                href="/projects"
+                href={pathname.startsWith('/dashboard/mp') || role === 'MP' ? '/dashboard/mp/projects' : '/projects'}
                 onClick={onClose}
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                  isLinkActive('/projects') 
+                  isLinkActive('/dashboard/mp/projects') || isLinkActive('/projects')
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
                     : 'text-gray-300 hover:bg-white/5 hover:text-white'
                 }`}
@@ -518,10 +518,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentUser, isOpen = false, o
               </Link>
 
               <Link
-                href="/projects/new"
+                href="/dashboard/mp/recommended"
                 onClick={onClose}
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
-                  isLinkActive('/projects/new') 
+                  isLinkActive('/dashboard/mp/recommended') || isLinkActive('/dashboard/mp/recommend') || isLinkActive('/projects/new') 
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
                     : 'text-gray-300 hover:bg-white/5 hover:text-white'
                 }`}

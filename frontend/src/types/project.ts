@@ -22,6 +22,8 @@ export interface Project {
   mpName?: string;
   districtId: string;
   districtName?: string;
+  district?: string;
+  state?: string;
   constituencyId: string;
   constituencyName?: string;
   agencyId?: string;

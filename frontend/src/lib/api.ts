@@ -94,6 +94,8 @@ export interface CreateRecommendationPayload {
   justification?: string;
   expected_beneficiaries?: string;
   priority?: string;
+  evidence_file?: string;
+  evidence_filename?: string;
 }
 
 export async function createRecommendation(payload: CreateRecommendationPayload, userRole: string = "MP"): Promise<any | null> {
@@ -362,6 +364,8 @@ export function normalizeProject(p: any): Project {
     mpName: p.mp_name || p.mpName || "Demo MP 013",
     districtId: p.district_id || p.districtId || p.district || "D001",
     districtName: p.district_name || p.districtName || `District ${p.district_id || p.district || 'D001'}`,
+    district: p.district || p.district_name || p.districtName || "D001",
+    state: p.state || "Maharashtra",
     constituencyId: p.constituency_id || p.constituencyId || "C001",
     constituencyName: p.constituency_name || p.constituencyName || "Constituency C001",
     agencyId: p.agency_id || p.agencyId || "",

@@ -369,7 +369,7 @@ function ImplementingAgencyDashboardContent() {
     async function loadData() {
       try {
         setLoading(true);
-        const data = await fetchProjects({ role: 'IMPLEMENTING_AGENCY', agencyId: agencyId });
+        const data = await fetchProjects(500);
         const finalProjects = data && data.length > 0 ? data : fallbackProjects;
         setProjects(finalProjects);
         if (finalProjects.length > 0) {

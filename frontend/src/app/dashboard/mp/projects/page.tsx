@@ -118,7 +118,7 @@ export default function MPProjectsPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <MPSelector currentMpName={activeMpName} onMPChange={handleMPChange} />
             <Link
-              href="/dashboard/mp/recommend"
+              href="/dashboard/mp/recommended"
               className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 shadow-sm transition-colors"
             >
               <PlusCircle className="w-4 h-4" />

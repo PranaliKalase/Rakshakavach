@@ -46,7 +46,7 @@ export default function ProjectsPage() {
             <p className="text-xs text-textSecondary mt-0.5">Comprehensive repository of all recommended, sanctioned, and active works (Live Database Connected).</p>
           </div>
           <Link
-            href="/projects/new"
+            href="/dashboard/mp/recommended"
             className="bg-primaryBlue hover:bg-govNavy text-white text-xs font-semibold px-4 py-2 rounded flex items-center gap-1.5 transition-colors self-start md:self-auto"
           >
             <PlusCircle className="w-4 h-4" />
