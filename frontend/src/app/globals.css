@@ -34,3 +34,13 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

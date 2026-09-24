@@ -442,3 +442,21 @@ export async function submitVerificationResponse(projectId: string, payload: {
   return await res.json();
 }
 
+export async function submitProjectCompletion(projectId: string, payload: {
+  completion_certificate_file?: string;
+  remarks?: string;
+  submitted_by?: string;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/completion`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Completion submission failed: ${errText}`);
+  }
+  return await res.json();
+}
+
+
