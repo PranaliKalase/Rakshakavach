@@ -19,10 +19,6 @@ function getInitialUser(path: string): UserProfile {
   if (path.includes('/dashboard/implementing-agency')) return DEMO_USERS.IMPLEMENTING_AGENCY;
   if (path.includes('/dashboard/ministry')) return DEMO_USERS.MINISTRY;
   if (path.startsWith('/admin') || path.includes('/dashboard/admin')) return DEMO_USERS.ADMIN;
-  try {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('rakshakavach_user') : null;
-    if (stored) return JSON.parse(stored);
-  } catch (e) {}
   return DEMO_USERS.DISTRICT_AUTHORITY;
 }
 
@@ -32,6 +28,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem('rakshakavach_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.role) {
+          setCurrentUser(parsed);
+          return;
+        }
+      }
+    } catch (e) {}
+
     const user = getInitialUser(pathname);
     setCurrentUser(user);
     try {

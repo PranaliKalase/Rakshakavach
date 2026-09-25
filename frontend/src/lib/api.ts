@@ -385,8 +385,8 @@ export function normalizeProject(p: any): Project {
     evidenceCount: p.evidence_count || (p.evidence_files ? p.evidence_files.length : 8),
     documentCount: p.document_count || (p.documents ? p.documents.length : 4),
     provenance: p.provenance || "OFFICIAL",
-    createdAt: p.created_at || p.createdAt || new Date().toISOString(),
-    updatedAt: p.updated_at || p.updatedAt || new Date().toISOString()
+    createdAt: p.created_at || p.createdAt || "2026-09-25T00:00:00.000Z",
+    updatedAt: p.updated_at || p.updatedAt || "2026-09-25T00:00:00.000Z"
   };
 }
 
