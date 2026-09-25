@@ -12,13 +12,13 @@ frontend/.env.local
 *.crt
 *.cert
 
-# Datasets, Sensitive Data Files & Spreadsheets
-data/
+# Datasets & Canonical Data
+!data/all_mps_and_projects_dataset.json
+!backend/data/all_mps_and_projects_dataset.json
 data_sample_extracted.json
 Allocated Limit for Honble MPs.xlsx
 *.xlsx
 *.xls
-*.csv
 *.tsv
 *.parquet
 *.json.gz

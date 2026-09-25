@@ -61,7 +61,10 @@ class DataLoaderService:
         base_dir = Path(__file__).parent.parent.parent
         possible_json_files = [
             base_dir / "data" / "all_mps_and_projects_dataset.json",
-            base_dir.parent / "data" / "all_mps_and_projects_dataset.json"
+            base_dir.parent / "data" / "all_mps_and_projects_dataset.json",
+            Path(__file__).parent.parent / "data" / "all_mps_and_projects_dataset.json",
+            Path.cwd() / "data" / "all_mps_and_projects_dataset.json",
+            Path.cwd() / "backend" / "data" / "all_mps_and_projects_dataset.json"
         ]
 
         json_file = None
