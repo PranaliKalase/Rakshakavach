@@ -9,21 +9,25 @@ DATASET_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "rakshkav
 RECOMMENDATIONS_FILE = DATASET_DIR / "mp_recommendations.json"
 AUDIT_LOG_FILE = DATASET_DIR / "governance_audit_log.json"
 
+from app.services.supabase_client import SupabaseClientService
+
 class RecommendationService:
     """
     Dedicated Service for MP Work Recommendation Persistence & Governance Audit Logging.
-    Maintains persistent database storage (backed by mp_recommendations.json & governance_audit_log.json)
+    Maintains persistent database storage (backed by Supabase & local fallback mp_recommendations.json)
     and handles state transitions, RBAC verification, audit logging, and project conversion.
     """
     _cached_recommendations: Optional[List[Dict[str, Any]]] = None
     _cached_audit_logs: Optional[List[Dict[str, Any]]] = None
 
     ALLOWED_STATUSES = [
+        "RECOMMENDED",
         "RECOMMENDED_BY_MP",
         "UNDER_REVIEW",
         "TECHNICAL_EVALUATION",
         "SANCTIONED",
         "REJECTED",
+        "WITHDRAWN",
         "WORK_ORDER_ISSUED",
         "IN_PROGRESS",
         "COMPLETED"
@@ -39,17 +43,42 @@ class RecommendationService:
     @classmethod
     def _load_recommendations(cls):
         DATASET_DIR.mkdir(parents=True, exist_ok=True)
+        local_recs = []
         if RECOMMENDATIONS_FILE.exists():
             try:
                 with open(RECOMMENDATIONS_FILE, "r", encoding="utf-8") as f:
-                    cls._cached_recommendations = json.load(f)
-                    return
+                    local_recs = json.load(f)
             except Exception as e:
                 print(f"Error reading recommendations file: {e}")
 
-        # Seed initial canonical recommendations if file doesn't exist
-        seed = cls._generate_seed_recommendations()
-        cls._cached_recommendations = seed
+        if not local_recs:
+            local_recs = cls._generate_seed_recommendations()
+
+        # Attempt to fetch real database data from Supabase
+        sp_recs = SupabaseClientService.fetch_mp_recommendations()
+        if sp_recs:
+            # Merge Supabase records with local records (Supabase taking precedence)
+            seen_ids = set()
+            merged = []
+            for r in sp_recs:
+                rid = str(r.get("id") or r.get("recommendation_id"))
+                if rid and rid not in seen_ids:
+                    seen_ids.add(rid)
+                    # Normalize field names for UI compatibility
+                    if "district_name" in r and "district" not in r:
+                        r["district"] = r["district_name"]
+                    if "state_name" in r and "state" not in r:
+                        r["state"] = r["state_name"]
+                    merged.append(r)
+            for r in local_recs:
+                rid = str(r.get("id") or r.get("recommendation_id"))
+                if rid and rid not in seen_ids:
+                    seen_ids.add(rid)
+                    merged.append(r)
+            cls._cached_recommendations = merged
+        else:
+            cls._cached_recommendations = local_recs
+
         cls._save_recommendations()
 
     @classmethod
@@ -64,15 +93,32 @@ class RecommendationService:
     @classmethod
     def _load_audit_logs(cls):
         DATASET_DIR.mkdir(parents=True, exist_ok=True)
+        local_logs = []
         if AUDIT_LOG_FILE.exists():
             try:
                 with open(AUDIT_LOG_FILE, "r", encoding="utf-8") as f:
-                    cls._cached_audit_logs = json.load(f)
-                    return
+                    local_logs = json.load(f)
             except Exception as e:
                 print(f"Error reading audit log file: {e}")
 
-        cls._cached_audit_logs = []
+        sp_logs = SupabaseClientService.fetch_governance_audit_logs()
+        if sp_logs:
+            seen_ids = set()
+            merged = []
+            for l in sp_logs:
+                lid = str(l.get("id") or l.get("audit_id"))
+                if lid and lid not in seen_ids:
+                    seen_ids.add(lid)
+                    merged.append(l)
+            for l in local_logs:
+                lid = str(l.get("id") or l.get("audit_id"))
+                if lid and lid not in seen_ids:
+                    seen_ids.add(lid)
+                    merged.append(l)
+            cls._cached_audit_logs = merged
+        else:
+            cls._cached_audit_logs = local_logs
+
         cls._save_audit_logs()
 
     @classmethod
@@ -93,22 +139,59 @@ class RecommendationService:
         performed_role: str,
         old_status: Optional[str] = None,
         new_status: Optional[str] = None,
-        entity_type: str = "RECOMMENDATION"
+        entity_type: str = "RECOMMENDATION",
+        project_id: Optional[str] = None,
+        previous_state: Optional[Dict[str, Any]] = None,
+        new_state: Optional[Dict[str, Any]] = None,
+        district_name: Optional[str] = "Pune",
+        constituency_name: Optional[str] = "Pune Constituency"
     ) -> Dict[str, Any]:
         cls._ensure_loaded()
+        audit_uuid = str(uuid.uuid4())
+        now_iso = datetime.now().isoformat()
+
         audit_entry = {
-            "audit_id": str(uuid.uuid4()),
+            "id": audit_uuid,
+            "audit_id": audit_uuid,
+            "project_id": project_id,
             "entity_type": entity_type,
-            "entity_id": entity_id,
+            "entity_id": str(entity_id),
             "action": action,
+            "previous_state": previous_state or {"status": old_status or "NONE"},
+            "new_state": new_state or {"status": new_status or "NONE"},
+            "performed_by_user_id": f"usr-{performed_role.lower()}",
+            "performed_by_name": performed_by,
+            "performed_by_role": performed_role,
             "performed_by": performed_by,
-            "performed_role": performed_role,
             "old_status": old_status or "NONE",
             "new_status": new_status or "NONE",
-            "timestamp": datetime.now().isoformat()
+            "state_name": "Maharashtra",
+            "district_name": district_name,
+            "constituency_name": constituency_name,
+            "created_at": now_iso,
+            "timestamp": now_iso
         }
         cls._cached_audit_logs.insert(0, audit_entry)
         cls._save_audit_logs()
+
+        # Permanent persistence in Supabase
+        SupabaseClientService.insert_governance_audit_log({
+            "id": audit_uuid,
+            "project_id": project_id if project_id and len(str(project_id)) == 36 else None,
+            "entity_type": entity_type,
+            "entity_id": str(entity_id),
+            "action": action,
+            "previous_state": audit_entry["previous_state"],
+            "new_state": audit_entry["new_state"],
+            "performed_by_user_id": audit_entry["performed_by_user_id"],
+            "performed_by_name": performed_by,
+            "performed_by_role": performed_role,
+            "state_name": "Maharashtra",
+            "district_name": district_name,
+            "constituency_name": constituency_name,
+            "created_at": now_iso
+        })
+
         return audit_entry
 
     @classmethod
@@ -133,9 +216,12 @@ class RecommendationService:
             sector, title, cost, desc = sample_sectors[(idx - 1) % len(sample_sectors)]
             rec_uuid = str(uuid.uuid4())
             now_iso = datetime.now().isoformat()
+            rec_code = f"REC-2026-{idx:05d}"
 
             seed_rec = {
+                "id": rec_uuid,
                 "recommendation_id": rec_uuid,
+                "recommendation_code": rec_code,
                 "project_title": f"{title} - {const_name}",
                 "project_description": desc,
                 "sector": sector,
@@ -143,7 +229,9 @@ class RecommendationService:
                 "village": f"Village-{idx:02d}",
                 "taluka": f"Taluka-{(idx % 3) + 1:02d}",
                 "district": dist_id,
+                "district_name": f"District {dist_id}",
                 "state": "Maharashtra",
+                "state_name": "Maharashtra",
                 "constituency_id": const_id,
                 "constituency_name": const_name,
                 "recommended_by_user_id": f"MP-USER-{idx:03d}",
@@ -152,10 +240,12 @@ class RecommendationService:
                 "mp_id": f"MP-{idx:03d}",
                 "mp_name": mp_name,
                 "recommended_at": now_iso,
-                "status": "RECOMMENDED_BY_MP" if idx % 2 != 0 else "UNDER_REVIEW",
+                "status": "RECOMMENDED" if idx % 2 != 0 else "UNDER_REVIEW",
                 "priority": "HIGH_PRIORITY" if idx % 2 != 0 else "MEDIUM",
                 "justification": "Urgent infrastructure development requested by local village panchayat.",
                 "expected_beneficiaries": "approx. 15,000 residents",
+                "remarks": "Submitted for district sanction",
+                "is_active": True,
                 "project_id": None,
                 "created_at": now_iso,
                 "updated_at": now_iso
@@ -171,25 +261,33 @@ class RecommendationService:
         rec_uuid = str(uuid.uuid4())
         now_iso = datetime.now().isoformat()
 
+        # Generate sequential recommendation code REC-2026-00001
+        count = len(cls._cached_recommendations or []) + 1
+        rec_code = data.get("recommendation_code") or f"REC-2026-{count:05d}"
+
         # Extract values with dynamic metadata defaults
-        mp_name = data.get("mp_name") or data.get("recommended_by_name") or "Demo MP 013"
-        constituency_name = data.get("constituency_name") or "Maharashtra Demo Parliamentary Constituency 13"
+        mp_name = data.get("mp_name") or data.get("recommended_by_name") or "Hon'ble MP — Pune Constituency"
+        constituency_name = data.get("constituency_name") or "Pune Lok Sabha Constituency"
         constituency_id = data.get("constituency_id") or "C001"
-        district = data.get("district") or data.get("district_id") or "D007"
+        district_name = data.get("district_name") or data.get("district") or data.get("district_id") or "Pune"
         mp_id = data.get("mp_id") or f"MP-{abs(hash(mp_name)) % 1000:03d}"
-        user_id = data.get("recommended_by_user_id") or data.get("logged_in_user_id") or f"USER-{mp_id}"
+        user_id = data.get("recommended_by_user_id") or data.get("logged_in_user_id") or f"usr-mp-{mp_id}"
         user_name = data.get("recommended_by_name") or data.get("logged_in_user_name") or mp_name
 
         recommendation = {
+            "id": rec_uuid,
             "recommendation_id": rec_uuid,
+            "recommendation_code": rec_code,
             "project_title": data.get("project_title") or data.get("work_name") or "Untitled Work Recommendation",
             "project_description": data.get("project_description") or data.get("description") or "",
             "sector": data.get("sector", "General"),
             "estimated_cost": float(data.get("estimated_cost", 0.0)),
             "village": data.get("village", ""),
             "taluka": data.get("taluka", ""),
-            "district": district,
+            "district": district_name,
+            "district_name": district_name,
             "state": data.get("state", "Maharashtra"),
+            "state_name": data.get("state_name", "Maharashtra"),
             "constituency_id": constituency_id,
             "constituency_name": constituency_name,
             "recommended_by_user_id": user_id,
@@ -198,10 +296,14 @@ class RecommendationService:
             "mp_id": mp_id,
             "mp_name": mp_name,
             "recommended_at": now_iso,
-            "status": "RECOMMENDED_BY_MP",
+            "status": "RECOMMENDED",
             "priority": data.get("priority", "MEDIUM"),
             "justification": data.get("justification", ""),
             "expected_beneficiaries": str(data.get("expected_beneficiaries") or data.get("beneficiary_details") or "Community Residents"),
+            "remarks": data.get("remarks") or "Work recommended by Hon'ble MP",
+            "is_active": True,
+            "evidence_file": data.get("evidence_file", ""),
+            "evidence_filename": data.get("evidence_filename", ""),
             "project_id": None,
             "created_at": now_iso,
             "updated_at": now_iso
@@ -210,14 +312,47 @@ class RecommendationService:
         cls._cached_recommendations.insert(0, recommendation)
         cls._save_recommendations()
 
-        # Log Governance Audit Entry
+        # Permanent persistence to Supabase mp_recommendations table
+        SupabaseClientService.insert_mp_recommendation({
+            "id": rec_uuid,
+            "recommendation_id": rec_uuid,
+            "recommendation_code": rec_code,
+            "project_title": recommendation["project_title"],
+            "project_description": recommendation["project_description"],
+            "sector": recommendation["sector"],
+            "estimated_cost": recommendation["estimated_cost"],
+            "village": recommendation.get("village", ""),
+            "taluka": recommendation.get("taluka", ""),
+            "district": recommendation["district_name"],
+            "district_name": recommendation["district_name"],
+            "state": recommendation["state_name"],
+            "state_name": recommendation["state_name"],
+            "constituency_id": recommendation["constituency_id"],
+            "constituency_name": recommendation["constituency_name"],
+            "recommended_by_user_id": user_id,
+            "recommended_by_name": user_name,
+            "recommended_by_role": "MP",
+            "mp_id": mp_id,
+            "mp_name": mp_name,
+            "status": "RECOMMENDED",
+            "priority": recommendation.get("priority", "MEDIUM"),
+            "remarks": recommendation["remarks"],
+            "is_active": True,
+            "created_at": now_iso,
+            "updated_at": now_iso
+        })
+
+        # Permanent persistence to Supabase governance_audit_logs table
         cls._log_audit(
             entity_id=rec_uuid,
-            action="MP_SUBMITTED_RECOMMENDATION",
+            action="RECOMMEND_WORK",
             performed_by=recommendation["recommended_by_name"],
             performed_role="MP",
             old_status="NONE",
-            new_status="RECOMMENDED_BY_MP"
+            new_status="RECOMMENDED",
+            new_state=recommendation,
+            district_name=district_name,
+            constituency_name=constituency_name
         )
 
         return recommendation
@@ -237,7 +372,7 @@ class RecommendationService:
             recs = [r for r in recs if r.get("mp_name") == mp_name or r.get("recommended_by_name") == mp_name]
 
         if district:
-            recs = [r for r in recs if r.get("district") == district or r.get("district_id") == district]
+            recs = [r for r in recs if r.get("district") == district or r.get("district_id") == district or r.get("district_name") == district]
 
         if status:
             recs = [r for r in recs if r.get("status") == status]
@@ -266,16 +401,13 @@ class RecommendationService:
         if not rec:
             raise ValueError(f"Recommendation '{rec_id}' not found.")
 
-        if new_status not in cls.ALLOWED_STATUSES:
-            raise ValueError(f"Invalid status '{new_status}'. Allowed: {cls.ALLOWED_STATUSES}")
-
-        old_status = rec.get("status", "RECOMMENDED_BY_MP")
+        old_status = rec.get("status", "RECOMMENDED")
         rec["status"] = new_status
         rec["updated_at"] = datetime.now().isoformat()
         if remarks:
-            rec["last_review_remarks"] = remarks
+            rec["remarks"] = remarks
 
-        # If status becomes SANCTIONED, trigger automatic project creation if not already linked
+        # Convert to project if SANCTIONED
         project_created = None
         if new_status == "SANCTIONED" and not rec.get("project_id"):
             project_created = cls._convert_recommendation_to_project(rec, performed_by, performed_role)
@@ -283,14 +415,51 @@ class RecommendationService:
 
         cls._save_recommendations()
 
-        # Log Audit
+        # Update Supabase mp_recommendations
+        SupabaseClientService.update_mp_recommendation(rec["id"], {
+            "status": new_status,
+            "remarks": remarks or f"Status updated to {new_status}",
+            "updated_at": datetime.now().isoformat()
+        })
+
+        # Insert Governance Decision in Supabase
+        decision_uuid = str(uuid.uuid4())
+        decision_type_map = {
+            "SANCTIONED": "SANCTIONED",
+            "REJECTED": "REJECTED",
+            "TECHNICAL_EVALUATION": "CLARIFICATION_REQUIRED",
+            "UNDER_REVIEW": "APPROVED",
+            "COMPLETED": "COMPLETED"
+        }
+        dec_type = decision_type_map.get(new_status, "APPROVED")
+
+        SupabaseClientService.insert_governance_decision({
+            "id": decision_uuid,
+            "project_id": rec.get("project_id") if rec.get("project_id") and len(str(rec.get("project_id"))) == 36 else None,
+            "recommendation_id": rec["id"],
+            "decision_type": dec_type,
+            "decision_reason": remarks or f"Governance action executed: {new_status}",
+            "remarks": remarks or f"Decision by {performed_by}",
+            "previous_status": old_status,
+            "new_status": new_status,
+            "decided_by_user_id": f"usr-{performed_role.lower()}",
+            "decided_by_name": performed_by,
+            "decided_by_role": performed_role,
+            "created_at": datetime.now().isoformat()
+        })
+
+        # Permanent Audit Log
         cls._log_audit(
-            entity_id=rec["recommendation_id"],
-            action=f"STATUS_UPDATED_TO_{new_status}",
+            entity_id=rec["id"],
+            action=f"GOVERNANCE_DECISION_{new_status}",
             performed_by=performed_by,
             performed_role=performed_role,
             old_status=old_status,
-            new_status=new_status
+            new_status=new_status,
+            previous_state={"status": old_status},
+            new_state={"status": new_status, "remarks": remarks},
+            district_name=rec.get("district_name", "Pune"),
+            constituency_name=rec.get("constituency_name", "Pune Constituency")
         )
 
         return {

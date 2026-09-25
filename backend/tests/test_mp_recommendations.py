@@ -39,7 +39,7 @@ def test_mp_recommendation_creation_and_persistence():
 
     assert "recommendation_id" in data
     rec_id = data["recommendation_id"]
-    assert data["status"] == "RECOMMENDED_BY_MP"
+    assert data["status"] in ["RECOMMENDED", "RECOMMENDED_BY_MP"]
     assert data["project_title"] == payload["project_title"]
 
     # Verify GET by ID

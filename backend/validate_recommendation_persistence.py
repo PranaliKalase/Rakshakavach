@@ -139,7 +139,11 @@ def run_validation():
     full_detail_res = client.get(f"/api/v1/recommendations/{rec_id}")
     full_logs = full_detail_res.json()["audit_logs"]
     for idx, log in enumerate(reversed(full_logs), 1):
-        print(f"  [{idx}] {log['timestamp']} | Action: {log['action']} | Role: {log['performed_role']} ({log['performed_by']}) | {log['old_status']} -> {log['new_status']}")
+        role = log.get('performed_role') or log.get('performed_by_role') or 'MP'
+        by = log.get('performed_by') or log.get('performed_by_name') or 'User'
+        old_st = log.get('old_status', 'NONE')
+        new_st = log.get('new_status', 'NONE')
+        print(f"  [{idx}] {log['timestamp']} | Action: {log['action']} | Role: {role} ({by}) | {old_st} -> {new_st}")
 
     # --------------------------------------------------------------------------
     # 6. RBAC VALIDATION

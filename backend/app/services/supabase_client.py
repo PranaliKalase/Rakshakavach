@@ -157,3 +157,114 @@ class SupabaseClientService:
             logger.error(f"Error fetching relational data for project {project_id} from Supabase: {e}")
             return None
 
+    @classmethod
+    def insert_mp_recommendation(cls, rec: Dict[str, Any]) -> bool:
+        if not cls.is_configured():
+            return False
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/mp_recommendations"
+            resp = httpx.post(url, json=rec, headers=cls._get_headers(), timeout=5.0)
+            return resp.status_code in [200, 201, 204]
+        except Exception as e:
+            logger.error(f"Supabase insert mp_recommendations error: {e}")
+            return False
+
+    @classmethod
+    def update_mp_recommendation(cls, rec_id: str, updates: Dict[str, Any]) -> bool:
+        if not cls.is_configured():
+            return False
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/mp_recommendations?id=eq.{rec_id}"
+            resp = httpx.patch(url, json=updates, headers=cls._get_headers(), timeout=5.0)
+            return resp.status_code in [200, 204]
+        except Exception as e:
+            logger.error(f"Supabase update mp_recommendations error: {e}")
+            return False
+
+    @classmethod
+    def insert_governance_decision(cls, decision: Dict[str, Any]) -> bool:
+        if not cls.is_configured():
+            return False
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/governance_decisions"
+            resp = httpx.post(url, json=decision, headers=cls._get_headers(), timeout=5.0)
+            return resp.status_code in [200, 201, 204]
+        except Exception as e:
+            logger.error(f"Supabase insert governance_decisions error: {e}")
+            return False
+
+    @classmethod
+    def insert_project_inspection(cls, inspection: Dict[str, Any]) -> bool:
+        if not cls.is_configured():
+            return False
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/project_inspections"
+            resp = httpx.post(url, json=inspection, headers=cls._get_headers(), timeout=5.0)
+            return resp.status_code in [200, 201, 204]
+        except Exception as e:
+            logger.error(f"Supabase insert project_inspections error: {e}")
+            return False
+
+    @classmethod
+    def insert_project_progress_update(cls, update: Dict[str, Any]) -> bool:
+        if not cls.is_configured():
+            return False
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/project_progress_updates"
+            resp = httpx.post(url, json=update, headers=cls._get_headers(), timeout=5.0)
+            return resp.status_code in [200, 201, 204]
+        except Exception as e:
+            logger.error(f"Supabase insert project_progress_updates error: {e}")
+            return False
+
+    @classmethod
+    def insert_project_evidence(cls, evidence: Dict[str, Any]) -> bool:
+        if not cls.is_configured():
+            return False
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/project_evidence"
+            resp = httpx.post(url, json=evidence, headers=cls._get_headers(), timeout=5.0)
+            return resp.status_code in [200, 201, 204]
+        except Exception as e:
+            logger.error(f"Supabase insert project_evidence error: {e}")
+            return False
+
+    @classmethod
+    def insert_governance_audit_log(cls, audit: Dict[str, Any]) -> bool:
+        if not cls.is_configured():
+            return False
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/governance_audit_logs"
+            resp = httpx.post(url, json=audit, headers=cls._get_headers(), timeout=5.0)
+            return resp.status_code in [200, 201, 204]
+        except Exception as e:
+            logger.error(f"Supabase insert governance_audit_logs error: {e}")
+            return False
+
+    @classmethod
+    def fetch_mp_recommendations(cls) -> Optional[List[Dict[str, Any]]]:
+        if not cls.is_configured():
+            return None
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/mp_recommendations?select=*&order=created_at.desc"
+            resp = httpx.get(url, headers=cls._get_headers(), timeout=5.0)
+            if resp.status_code in [200, 206]:
+                return resp.json()
+        except Exception as e:
+            logger.error(f"Error fetching mp_recommendations from Supabase: {e}")
+        return None
+
+    @classmethod
+    def fetch_governance_audit_logs(cls) -> Optional[List[Dict[str, Any]]]:
+        if not cls.is_configured():
+            return None
+        try:
+            url = f"{settings.SUPABASE_URL}/rest/v1/governance_audit_logs?select=*&order=created_at.desc"
+            resp = httpx.get(url, headers=cls._get_headers(), timeout=5.0)
+            if resp.status_code in [200, 206]:
+                return resp.json()
+        except Exception as e:
+            logger.error(f"Error fetching governance_audit_logs from Supabase: {e}")
+        return None
+
+

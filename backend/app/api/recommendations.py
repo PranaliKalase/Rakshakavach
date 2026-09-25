@@ -25,6 +25,8 @@ class RecommendationCreateRequest(BaseModel):
     priority: Optional[str] = "MEDIUM"
     justification: Optional[str] = ""
     expected_beneficiaries: Optional[str] = "Local residents"
+    evidence_file: Optional[str] = ""
+    evidence_filename: Optional[str] = ""
 
 class RecommendationStatusUpdateRequest(BaseModel):
     status: str

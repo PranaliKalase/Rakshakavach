@@ -52,3 +52,9 @@ class ProgressUpdateRequest(BaseModel):
     actual_expenditure: float = Field(..., ge=0)
     milestone: Optional[str] = None
     remarks: Optional[str] = None
+
+class ProjectCompletionRequest(BaseModel):
+    completion_certificate_file: Optional[str] = None
+    remarks: Optional[str] = None
+    submitted_by: Optional[str] = None
+
