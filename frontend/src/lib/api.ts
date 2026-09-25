@@ -1,8 +1,9 @@
 import { Project } from '@/types/project';
+import { getProjectState, getProjectDistrict } from '@/lib/map-utils';
 
 export type NormalizedProject = Project & { [key: string]: any };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
 
 export interface FetchProjectsOptions {
   role?: string;
@@ -99,24 +100,35 @@ export interface CreateRecommendationPayload {
 }
 
 export async function createRecommendation(payload: CreateRecommendationPayload, userRole: string = "MP"): Promise<any | null> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/recommendations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-User-Role': userRole
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Recommendation submission failed (${res.status}): ${errText}`);
+  const endpoints = [
+    `${API_BASE_URL}/recommendations`,
+    `http://127.0.0.1:8000/api/v1/recommendations`,
+    `http://localhost:8000/api/v1/recommendations`
+  ];
+
+  let lastErr: any = null;
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Role': userRole
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Recommendation submission failed (${res.status}): ${errText}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      lastErr = err;
     }
-    return await res.json();
-  } catch (err: any) {
-    console.error("API error in createRecommendation:", err);
-    throw new Error(err?.message && err.message !== "Failed to fetch" ? err.message : "Unable to connect to RAKSHKAVACH Backend API (http://localhost:8000). Please check your connection.");
   }
+
+  console.error("API error in createRecommendation:", lastErr);
+  throw new Error(lastErr?.message && lastErr.message !== "Failed to fetch" ? lastErr.message : "Unable to connect to RAKSHKAVACH Backend API (http://127.0.0.1:8000). Please check your connection.");
 }
 
 export async function fetchRecommendations(opts: {
@@ -355,6 +367,9 @@ export async function fetchAuditLogs(limit: number = 100): Promise<any[]> {
 
 // Normalize snake_case or camelCase properties into standard frontend Project type
 export function normalizeProject(p: any): Project {
+  const state = getProjectState(p);
+  const districtName = getProjectDistrict(p, state);
+
   return {
     id: p.id || p.project_id,
     projectCode: p.project_code || p.projectCode || p.id,
@@ -362,10 +377,10 @@ export function normalizeProject(p: any): Project {
     description: p.description || p.project_description || "",
     allocationId: p.allocation_id || p.allocationId || "",
     mpName: p.mp_name || p.mpName || "Demo MP 013",
-    districtId: p.district_id || p.districtId || p.district || "D001",
-    districtName: p.district_name || p.districtName || `District ${p.district_id || p.district || 'D001'}`,
-    district: p.district || p.district_name || p.districtName || "D001",
-    state: p.state || "Maharashtra",
+    districtId: p.district_id || p.districtId || districtName,
+    districtName: districtName,
+    district: districtName,
+    state: state,
     constituencyId: p.constituency_id || p.constituencyId || "C001",
     constituencyName: p.constituency_name || p.constituencyName || "Constituency C001",
     agencyId: p.agency_id || p.agencyId || "",

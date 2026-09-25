@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { fetchProjects } from '@/lib/api';
 import { Project } from '@/types/project';
-import { getProjectCoordinates, isValidIndiaCoordinate, INDIA_CENTER, DEFAULT_ZOOM } from '@/lib/map-utils';
+import { getProjectCoordinates, isValidIndiaCoordinate, INDIA_CENTER, DEFAULT_ZOOM, STATE_COORDINATES } from '@/lib/map-utils';
 import { 
   FolderKanban, 
   AlertTriangle, 
@@ -102,11 +102,12 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
     }
   }, [propProjects, initialProjects]);
 
-  // Dynamic filter options derived from dataset (STEP 9)
+  // Dynamic filter options derived from dataset (STEP 9) with cascade support
   const statesList = useMemo(() => {
     const set = new Set<string>();
     allProjects.forEach(p => {
-      set.add(p.state || 'Maharashtra');
+      const st = p.state || (p as any).state_name || (p as any).stateName;
+      if (st) set.add(st);
     });
     return Array.from(set).sort();
   }, [allProjects]);
@@ -114,7 +115,7 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
   const districtsList = useMemo(() => {
     const set = new Set<string>();
     allProjects.forEach(p => {
-      const pState = p.state || 'Maharashtra';
+      const pState = p.state || (p as any).state_name || (p as any).stateName;
       if (selectedState === 'ALL' || pState === selectedState) {
         const dName = p.districtName || p.districtId || p.district;
         if (dName) set.add(dName);
@@ -126,32 +127,51 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
   const sectorsList = useMemo(() => {
     const set = new Set<string>();
     allProjects.forEach(p => {
+      const pState = p.state || (p as any).state_name || (p as any).stateName;
+      const pDistrict = p.districtName || p.districtId || p.district;
+      if (selectedState !== 'ALL' && pState !== selectedState) return;
+      if (selectedDistrict !== 'ALL' && pDistrict !== selectedDistrict) return;
+
       if (p.sector) set.add(p.sector);
     });
     return Array.from(set).sort();
-  }, [allProjects]);
+  }, [allProjects, selectedState, selectedDistrict]);
 
   const constituenciesList = useMemo(() => {
     const set = new Set<string>();
     allProjects.forEach(p => {
+      const pState = p.state || (p as any).state_name || (p as any).stateName;
+      const pDistrict = p.districtName || p.districtId || p.district;
+
+      if (selectedState !== 'ALL' && pState !== selectedState) return;
+      if (selectedDistrict !== 'ALL' && pDistrict !== selectedDistrict) return;
+
       const cName = p.constituencyName || p.constituencyId;
       if (cName) set.add(cName);
     });
     return Array.from(set).sort();
-  }, [allProjects]);
+  }, [allProjects, selectedState, selectedDistrict]);
 
   const mpList = useMemo(() => {
     const set = new Set<string>();
     allProjects.forEach(p => {
+      const pState = p.state || (p as any).state_name || (p as any).stateName;
+      const pDistrict = p.districtName || p.districtId || p.district;
+      const pConst = p.constituencyName || p.constituencyId;
+
+      if (selectedState !== 'ALL' && pState !== selectedState) return;
+      if (selectedDistrict !== 'ALL' && pDistrict !== selectedDistrict) return;
+      if (selectedConstituency !== 'ALL' && pConst !== selectedConstituency) return;
+
       if (p.mpName) set.add(p.mpName);
     });
     return Array.from(set).sort();
-  }, [allProjects]);
+  }, [allProjects, selectedState, selectedDistrict, selectedConstituency]);
 
   // STEP 9: Filtered projects list based on dropdown selections
   const filteredProjects = useMemo(() => {
     return allProjects.filter(p => {
-      const pState = p.state || 'Maharashtra';
+      const pState = p.state || (p as any).state_name || (p as any).stateName || 'Maharashtra';
       const pDistrict = p.districtName || p.districtId || p.district || '';
       const pPriority = p.priority || (p as any).verification_priority || 'NORMAL';
       const pConst = p.constituencyName || p.constituencyId || '';
@@ -167,6 +187,22 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
       return true;
     });
   }, [allProjects, selectedState, selectedDistrict, selectedPriority, selectedSector, selectedConstituency, selectedMP]);
+
+  // Dynamic Map Center & Zoom based on active filters
+  const mapCenterAndZoom = useMemo<{ center: [number, number]; zoom: number }>(() => {
+    if (selectedState !== 'ALL' && STATE_COORDINATES[selectedState]) {
+      return { center: STATE_COORDINATES[selectedState], zoom: 7 };
+    }
+    if (filteredProjects.length > 0 && selectedState !== 'ALL') {
+      const coords = getProjectCoordinates(filteredProjects[0], 0);
+      return { center: coords, zoom: 7 };
+    }
+    if (filteredProjects.length > 0 && (selectedDistrict !== 'ALL' || selectedConstituency !== 'ALL' || selectedMP !== 'ALL')) {
+      const coords = getProjectCoordinates(filteredProjects[0], 0);
+      return { center: coords, zoom: 8 };
+    }
+    return { center: INDIA_CENTER, zoom: DEFAULT_ZOOM };
+  }, [selectedState, selectedDistrict, selectedConstituency, selectedMP, filteredProjects]);
 
   // STEP 8: Dynamic KPI Calculations from live filtered data
   const totalCount = filteredProjects.length;
@@ -326,6 +362,8 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
               onChange={(e) => {
                 setSelectedState(e.target.value);
                 setSelectedDistrict('ALL');
+                setSelectedConstituency('ALL');
+                setSelectedMP('ALL');
               }}
               className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-semibold text-slate-900"
             >
@@ -341,7 +379,11 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">District</label>
             <select
               value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
+              onChange={(e) => {
+                setSelectedDistrict(e.target.value);
+                setSelectedConstituency('ALL');
+                setSelectedMP('ALL');
+              }}
               className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-semibold text-slate-900"
             >
               <option value="ALL">All Districts ({districtsList.length})</option>
@@ -359,7 +401,7 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
               onChange={(e) => setSelectedPriority(e.target.value)}
               className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-semibold text-slate-900"
             >
-              <option value="ALL">All Priorities</option>
+              <option value="ALL">All Priorities (3)</option>
               <option value="NORMAL">NORMAL (Green)</option>
               <option value="ATTENTION">ATTENTION (Amber)</option>
               <option value="HIGH_PRIORITY">HIGH_PRIORITY (Red)</option>
@@ -386,10 +428,13 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
             <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Constituency</label>
             <select
               value={selectedConstituency}
-              onChange={(e) => setSelectedConstituency(e.target.value)}
+              onChange={(e) => {
+                setSelectedConstituency(e.target.value);
+                setSelectedMP('ALL');
+              }}
               className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 font-semibold text-slate-900"
             >
-              <option value="ALL">All Constituencies</option>
+              <option value="ALL">All Constituencies ({constituenciesList.length})</option>
               {constituenciesList.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -458,7 +503,7 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
         </div>
       ) : (
         /* STEP 1: Default Center = India [22.9734, 78.6569], zoom = 5 */
-        <LeafletMapInner projects={filteredProjects} center={INDIA_CENTER} zoom={DEFAULT_ZOOM} totalProjectsCount={allProjects.length} />
+        <LeafletMapInner projects={filteredProjects} center={mapCenterAndZoom.center} zoom={mapCenterAndZoom.zoom} totalProjectsCount={allProjects.length} />
       )}
 
       {/* STEP 10 & 11: DISTRICT ANALYTICS TABLE & AI INSIGHTS */}
