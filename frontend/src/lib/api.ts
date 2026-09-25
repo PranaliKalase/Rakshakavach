@@ -3,7 +3,43 @@ import { getProjectState, getProjectDistrict } from '@/lib/map-utils';
 
 export type NormalizedProject = Project & { [key: string]: any };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+const DEFAULT_PROD_API_URL = 'https://rakshakavach-backend.onrender.com/api/v1';
+
+export function getApiBaseUrl(): string {
+  let envUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  // On client side in production host (e.g. Vercel), fall back to public Render backend if localhost/empty
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    
+    if (!isLocalhost) {
+      if (!envUrl || envUrl.includes('127.0.0.1') || envUrl.includes('localhost')) {
+        return DEFAULT_PROD_API_URL;
+      }
+    }
+  }
+
+  if (!envUrl) {
+    return 'http://127.0.0.1:8000/api/v1';
+  }
+
+  // Enforce HTTPS for production domains to avoid mixed content errors
+  if (envUrl.includes('onrender.com') && envUrl.startsWith('http://')) {
+    envUrl = envUrl.replace('http://', 'https://');
+  }
+
+  let cleanUrl = envUrl.replace(/\/+$/, '');
+  if (!cleanUrl.endsWith('/api/v1')) {
+    if (cleanUrl.endsWith('/api')) {
+      cleanUrl += '/v1';
+    } else {
+      cleanUrl += '/api/v1';
+    }
+  }
+
+  return cleanUrl;
+}
 
 export interface FetchProjectsOptions {
   role?: string;
@@ -33,7 +69,7 @@ export async function fetchProjects(optsOrLimit: number | FetchProjectsOptions =
     if (options.search) params.append('search', options.search);
     if (options.provenance) params.append('provenance', options.provenance);
 
-    const url = `${API_BASE_URL}/projects?${params.toString()}`;
+    const url = `${getApiBaseUrl()}/projects?${params.toString()}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch projects: ${res.statusText}`);
@@ -48,7 +84,7 @@ export async function fetchProjects(optsOrLimit: number | FetchProjectsOptions =
 
 export async function fetchMPSummary(mpName: string): Promise<any> {
   try {
-    const res = await fetch(`${API_BASE_URL}/mp/summary?mp_name=${encodeURIComponent(mpName)}`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/mp/summary?mp_name=${encodeURIComponent(mpName)}`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch MP summary for ${mpName}: ${res.statusText}`);
     }
@@ -61,7 +97,7 @@ export async function fetchMPSummary(mpName: string): Promise<any> {
 
 export async function fetchMPList(): Promise<any[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/mp/list`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/mp/list`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch MP list: ${res.statusText}`);
     }
@@ -101,7 +137,7 @@ export interface CreateRecommendationPayload {
 
 export async function createRecommendation(payload: CreateRecommendationPayload, userRole: string = "MP"): Promise<any | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/recommendations`, {
+    const res = await fetch(`${getApiBaseUrl()}/recommendations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -116,7 +152,7 @@ export async function createRecommendation(payload: CreateRecommendationPayload,
     return await res.json();
   } catch (err: any) {
     console.error("API error in createRecommendation:", err);
-    throw new Error(err?.message && err.message !== "Failed to fetch" ? err.message : `Unable to connect to RAKSHKAVACH Backend API (${API_BASE_URL}). Please check your connection.`);
+    throw new Error(err?.message && err.message !== "Failed to fetch" ? err.message : `Unable to connect to RAKSHKAVACH Backend API (${getApiBaseUrl()}). Please check your connection.`);
   }
 }
 
@@ -133,7 +169,7 @@ export async function fetchRecommendations(opts: {
     if (opts.status) params.append('status', opts.status);
     if (opts.role) params.append('role', opts.role);
 
-    const res = await fetch(`${API_BASE_URL}/recommendations?${params.toString()}`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/recommendations?${params.toString()}`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch recommendations: ${res.statusText}`);
     }
@@ -146,7 +182,7 @@ export async function fetchRecommendations(opts: {
 
 export async function fetchRecommendationById(id: string): Promise<any | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/recommendations/${encodeURIComponent(id)}`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/recommendations/${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch recommendation ${id}: ${res.statusText}`);
     }
@@ -163,7 +199,7 @@ export async function updateRecommendationStatus(
   userRole: string = "DISTRICT_AUTHORITY"
 ): Promise<any> {
   try {
-    const res = await fetch(`${API_BASE_URL}/recommendations/${encodeURIComponent(id)}/status`, {
+    const res = await fetch(`${getApiBaseUrl()}/recommendations/${encodeURIComponent(id)}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -184,7 +220,7 @@ export async function updateRecommendationStatus(
 
 export async function fetchRecommendationsSummary(): Promise<any> {
   try {
-    const res = await fetch(`${API_BASE_URL}/recommendations/summary`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/recommendations/summary`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch recommendations summary: ${res.statusText}`);
     }
@@ -207,7 +243,7 @@ export async function createProject(payload: {
   longitude?: number;
 }): Promise<Project | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/projects`, {
+    const res = await fetch(`${getApiBaseUrl()}/projects`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -236,7 +272,7 @@ export async function createProject(payload: {
 
 export async function queryCopilot(payload: { prompt: string; role?: string; mp_name?: string; project_id?: string }): Promise<any> {
   try {
-    const res = await fetch(`${API_BASE_URL}/assistant/query`, {
+    const res = await fetch(`${getApiBaseUrl()}/assistant/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -253,7 +289,7 @@ export async function queryCopilot(payload: { prompt: string; role?: string; mp_
 
 export async function fetchProjectById(id: string): Promise<Project | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch project ${id}: ${res.statusText}`);
     }
@@ -267,7 +303,7 @@ export async function fetchProjectById(id: string): Promise<Project | null> {
 
 export async function fetchProjectRelational(id: string): Promise<any | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}/relational`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(id)}/relational`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch relational data for ${id}: ${res.statusText}`);
     }
@@ -280,7 +316,7 @@ export async function fetchProjectRelational(id: string): Promise<any | null> {
 
 export async function fetchProjectRisk(id: string): Promise<any | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(id)}/risk`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(id)}/risk`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch risk data for ${id}: ${res.statusText}`);
     }
@@ -293,7 +329,7 @@ export async function fetchProjectRisk(id: string): Promise<any | null> {
 
 export async function fetchVerificationQueue(limit: number = 500): Promise<any[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/verification-queue?limit=${limit}`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/verification-queue?limit=${limit}`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch verification queue: ${res.statusText}`);
     }
@@ -312,7 +348,7 @@ export async function submitInspection(projectId: string, payload: {
   verification_outcome?: string;
   officer_remarks: string;
 }): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/inspections`, {
+  const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(projectId)}/inspections`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -329,7 +365,7 @@ export async function recordAuthorityDecision(projectId: string, payload: {
   decision: string;
   remarks: string;
 }): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/decision`, {
+  const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(projectId)}/decision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -343,7 +379,7 @@ export async function recordAuthorityDecision(projectId: string, payload: {
 
 export async function fetchAuditLogs(limit: number = 100): Promise<any[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/audit-logs?limit=${limit}`, { cache: 'no-store' });
+    const res = await fetch(`${getApiBaseUrl()}/audit-logs?limit=${limit}`, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to fetch audit logs: ${res.statusText}`);
     }
@@ -401,7 +437,7 @@ export async function updateProjectProgress(projectId: string, payload: {
   milestone?: string;
   remarks?: string;
 }): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/progress`, {
+  const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(projectId)}/progress`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -420,7 +456,7 @@ export async function submitProjectEvidence(projectId: string, payload: {
   location?: string;
   uploaded_by?: string;
 }): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/evidence`, {
+  const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(projectId)}/evidence`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -438,7 +474,7 @@ export async function submitVerificationResponse(projectId: string, payload: {
   supporting_evidence_id?: string;
   submitted_by?: string;
 }): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/verification-response`, {
+  const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(projectId)}/verification-response`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -455,7 +491,7 @@ export async function submitProjectCompletion(projectId: string, payload: {
   remarks?: string;
   submitted_by?: string;
 }): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/projects/${encodeURIComponent(projectId)}/completion`, {
+  const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(projectId)}/completion`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
