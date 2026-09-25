@@ -19,7 +19,15 @@ export const MPSelector: React.FC<MPSelectorProps> = ({ currentMpName, onMPChang
       try {
         setLoading(true);
         const data = await fetchMPList();
-        setMpList(data);
+        setMpList(data || []);
+        
+        // If currentMpName is a placeholder or not in the loaded dataset MP list, auto select first real dataset MP
+        if (data && data.length > 0) {
+          const match = data.find(m => m.mp_name === currentMpName);
+          if (!match) {
+            onMPChange(data[0].mp_name, data[0].constituency_name);
+          }
+        }
       } catch (err) {
         console.error("Failed to load MP list:", err);
       } finally {
