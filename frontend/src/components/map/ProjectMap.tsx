@@ -458,7 +458,7 @@ export const ProjectMap: React.FC<ProjectMapProps> = ({ initialProjects, project
         </div>
       ) : (
         /* STEP 1: Default Center = India [22.9734, 78.6569], zoom = 5 */
-        <LeafletMapInner projects={filteredProjects} center={INDIA_CENTER} zoom={DEFAULT_ZOOM} />
+        <LeafletMapInner projects={filteredProjects} center={INDIA_CENTER} zoom={DEFAULT_ZOOM} totalProjectsCount={allProjects.length} />
       )}
 
       {/* STEP 10 & 11: DISTRICT ANALYTICS TABLE & AI INSIGHTS */}
