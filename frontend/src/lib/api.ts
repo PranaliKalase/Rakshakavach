@@ -100,35 +100,24 @@ export interface CreateRecommendationPayload {
 }
 
 export async function createRecommendation(payload: CreateRecommendationPayload, userRole: string = "MP"): Promise<any | null> {
-  const endpoints = [
-    `${API_BASE_URL}/recommendations`,
-    `http://127.0.0.1:8000/api/v1/recommendations`,
-    `http://localhost:8000/api/v1/recommendations`
-  ];
-
-  let lastErr: any = null;
-  for (const endpoint of endpoints) {
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-Role': userRole
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Recommendation submission failed (${res.status}): ${errText}`);
-      }
-      return await res.json();
-    } catch (err: any) {
-      lastErr = err;
+  try {
+    const res = await fetch(`${API_BASE_URL}/recommendations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Role': userRole
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Recommendation submission failed (${res.status}): ${errText}`);
     }
+    return await res.json();
+  } catch (err: any) {
+    console.error("API error in createRecommendation:", err);
+    throw new Error(err?.message && err.message !== "Failed to fetch" ? err.message : `Unable to connect to RAKSHKAVACH Backend API (${API_BASE_URL}). Please check your connection.`);
   }
-
-  console.error("API error in createRecommendation:", lastErr);
-  throw new Error(lastErr?.message && lastErr.message !== "Failed to fetch" ? lastErr.message : "Unable to connect to RAKSHKAVACH Backend API (http://127.0.0.1:8000). Please check your connection.");
 }
 
 export async function fetchRecommendations(opts: {

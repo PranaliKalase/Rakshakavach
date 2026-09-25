@@ -31,7 +31,7 @@ interface SystemServiceStatus {
 }
 
 const SYSTEM_SERVICES: SystemServiceStatus[] = [
-  { name: 'FastAPI Backend API Engine', type: 'REST API', endpoint: 'http://localhost:8000/api/v1', status: 'OPERATIONAL', latency: '14 ms', uptime: '99.98%', lastChecked: 'Just now' },
+  { name: 'FastAPI Backend API Engine', type: 'REST API', endpoint: process.env.NEXT_PUBLIC_API_URL || 'https://api.rakshakavach.gov.in/api/v1', status: 'OPERATIONAL', latency: '14 ms', uptime: '99.98%', lastChecked: 'Just now' },
   { name: 'PostgreSQL / Supabase Database', type: 'Relational DB', endpoint: 'https://your-project.supabase.co', status: 'OPERATIONAL', latency: '22 ms', uptime: '99.99%', lastChecked: 'Just now' },
   { name: 'Cloud Storage & Evidence Bucket', type: 'Object Storage', endpoint: 's3://rakshakavach-evidence', status: 'OPERATIONAL', latency: '35 ms', uptime: '99.95%', lastChecked: '1 min ago' },
   { name: 'Mapbox GIS Vector Tile Service', type: 'Geospatial API', endpoint: 'https://api.mapbox.com/v4', status: 'OPERATIONAL', latency: '48 ms', uptime: '99.90%', lastChecked: 'Just now' },
