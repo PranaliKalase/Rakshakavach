@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS mp_recommendations (
     priority VARCHAR(50) DEFAULT 'MEDIUM',
     justification TEXT,
     expected_beneficiaries TEXT,
+    evidence_file TEXT,
+    evidence_filename VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
