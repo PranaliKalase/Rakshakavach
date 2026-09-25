@@ -334,13 +334,57 @@ class RecommendationService:
             "recommended_by_role": "MP",
             "mp_id": mp_id,
             "mp_name": mp_name,
-            "status": "RECOMMENDED",
+            "status": "RECOMMENDED_BY_MP",
             "priority": recommendation.get("priority", "MEDIUM"),
             "remarks": recommendation["remarks"],
             "is_active": True,
             "created_at": now_iso,
             "updated_at": now_iso
         })
+
+        # Create ONE permanent project record with the same ID for end-to-end governance lifecycle
+        new_project = {
+            "id": rec_uuid,
+            "project_id": rec_uuid,
+            "project_code": f"PRJ-MPLADS-{rec_code}",
+            "recommendation_id": rec_uuid,
+            "work_name": recommendation["project_title"],
+            "project_title": recommendation["project_title"],
+            "description": recommendation["project_description"],
+            "sector": recommendation["sector"],
+            "sanctioned_cost": recommendation["estimated_cost"],
+            "sanctioned_amount": recommendation["estimated_cost"],
+            "estimated_cost": recommendation["estimated_cost"],
+            "actual_expenditure": 0.0,
+            "physical_progress": 0.0,
+            "financial_progress": 0.0,
+            "status": "RECOMMENDED_BY_MP",
+            "priority": recommendation.get("priority", "NORMAL"),
+            "verification_priority": recommendation.get("priority", "NORMAL"),
+            "district_id": data.get("district_id") or "D007",
+            "district_name": recommendation["district_name"],
+            "constituency_id": recommendation["constituency_id"],
+            "constituency_name": recommendation["constituency_name"],
+            "mp_name": mp_name,
+            "allocation_id": f"ALLOC-{recommendation['constituency_id']}",
+            "trust_score": 100.0,
+            "provenance": "OFFICIAL",
+            "latitude": float(data.get("latitude") or 21.3554),
+            "longitude": float(data.get("longitude") or 72.7368),
+            "created_at": now_iso,
+            "updated_at": now_iso
+        }
+
+        all_projects = DataLoaderService.load_dataset()
+        all_projects.insert(0, new_project)
+        if DataLoaderService._cached_index is not None:
+            DataLoaderService._cached_index[rec_uuid] = new_project
+            DataLoaderService._cached_index[new_project["project_code"]] = new_project
+
+        recommendation["project_id"] = rec_uuid
+
+        # Permanent persistence to Supabase projects table
+        SupabaseClientService.upsert_projects([new_project])
 
         # Permanent persistence to Supabase governance_audit_logs table
         cls._log_audit(
@@ -349,10 +393,11 @@ class RecommendationService:
             performed_by=recommendation["recommended_by_name"],
             performed_role="MP",
             old_status="NONE",
-            new_status="RECOMMENDED",
+            new_status="RECOMMENDED_BY_MP",
             new_state=recommendation,
             district_name=district_name,
-            constituency_name=constituency_name
+            constituency_name=constituency_name,
+            project_id=rec_uuid
         )
 
         return recommendation
@@ -412,6 +457,12 @@ class RecommendationService:
         if new_status == "SANCTIONED" and not rec.get("project_id"):
             project_created = cls._convert_recommendation_to_project(rec, performed_by, performed_role)
             rec["project_id"] = project_created["id"]
+        elif rec.get("project_id"):
+            proj = DataLoaderService.get_project_by_id(str(rec["project_id"]))
+            if proj:
+                proj["status"] = new_status
+                proj["updated_at"] = datetime.now().isoformat()
+                SupabaseClientService.upsert_projects([proj])
 
         cls._save_recommendations()
 

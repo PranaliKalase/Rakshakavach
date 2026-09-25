@@ -3,11 +3,13 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from app.services.data_loader import DataLoaderService
 from app.ml.multi_factor_engine import MultiFactorAnomalyEngine
+from app.services.supabase_client import SupabaseClientService
 
 class GovernanceWorkflowService:
     """
     Service managing the human-in-the-loop Governance Workflow:
     Verification Queue -> Field Inspection Submission -> District Authority Review -> Final Decision -> Audit Logging.
+    Persists all governance actions directly to Supabase PostgreSQL database.
     """
 
     _audit_logs: List[Dict[str, Any]] = []
@@ -101,7 +103,7 @@ class GovernanceWorkflowService:
             "officer_remarks": officer_remarks,
             "inspection_date": datetime.now().strftime("%Y-%m-%d"),
             "created_at": datetime.now().isoformat(),
-            "provenance": "SYNTHETIC DEMO DATA"
+            "provenance": "OFFICIAL"
         }
 
         # Attach to project & update status
@@ -109,7 +111,23 @@ class GovernanceWorkflowService:
             proj["inspections"] = []
         proj["inspections"].append(inspection_record)
         proj["status"] = "VERIFIED" if verification_outcome == "VERIFIED" else "VERIFICATION_PENDING"
+        proj["physical_progress"] = actual_physical_progress
         cls._cached_queue = None
+
+        # Permanent persistence to Supabase project_inspections table
+        SupabaseClientService.insert_project_inspection({
+            "id": inspection_id,
+            "project_id": proj["id"] if len(str(proj["id"])) == 36 else None,
+            "physical_progress": actual_physical_progress,
+            "location_verified": is_location_verified,
+            "inspection_notes": f"Condition: {observed_condition}. Remarks: {officer_remarks}",
+            "inspector_user_id": officer_id,
+            "inspector_name": "Monitoring Officer Official",
+            "created_at": datetime.now().isoformat()
+        })
+
+        # Update Project state in Supabase
+        SupabaseClientService.upsert_projects([proj])
 
         # Record Audit Log
         audit_entry = {
@@ -126,6 +144,22 @@ class GovernanceWorkflowService:
             "created_at": datetime.now().isoformat()
         }
         cls._audit_logs.append(audit_entry)
+
+        # Permanent persistence to Supabase governance_audit_logs
+        SupabaseClientService.insert_governance_audit_log({
+            "id": audit_entry["id"],
+            "project_id": proj["id"] if len(str(proj["id"])) == 36 else None,
+            "entity_type": "FIELD_INSPECTION",
+            "entity_id": inspection_id,
+            "action": "SUBMIT_FIELD_INSPECTION",
+            "new_state": inspection_record,
+            "performed_by_user_id": officer_id,
+            "performed_by_name": "Monitoring Officer Official",
+            "performed_by_role": "MONITORING_OFFICER",
+            "district_name": proj.get("district_name", "Pune"),
+            "constituency_name": proj.get("constituency_name", "Pune Constituency"),
+            "created_at": audit_entry["created_at"]
+        })
 
         return {
             "status": "success",
@@ -152,6 +186,25 @@ class GovernanceWorkflowService:
         proj["status"] = new_status
         proj["updated_at"] = datetime.now().isoformat()
 
+        # Update Project state in Supabase
+        SupabaseClientService.upsert_projects([proj])
+
+        # Record Governance Decision in Supabase
+        decision_id = str(uuid.uuid4())
+        SupabaseClientService.insert_governance_decision({
+            "id": decision_id,
+            "project_id": proj["id"] if len(str(proj["id"])) == 36 else None,
+            "decision_type": decision.upper(),
+            "decision_reason": remarks,
+            "remarks": remarks,
+            "previous_status": previous_status,
+            "new_status": new_status,
+            "decided_by_user_id": authority_id,
+            "decided_by_name": "District Authority Official",
+            "decided_by_role": "DISTRICT_AUTHORITY",
+            "created_at": datetime.now().isoformat()
+        })
+
         # Record Audit Log
         audit_entry = {
             "id": str(uuid.uuid4()),
@@ -170,6 +223,23 @@ class GovernanceWorkflowService:
         }
         cls._audit_logs.append(audit_entry)
 
+        # Permanent persistence to Supabase governance_audit_logs
+        SupabaseClientService.insert_governance_audit_log({
+            "id": audit_entry["id"],
+            "project_id": proj["id"] if len(str(proj["id"])) == 36 else None,
+            "entity_type": "GOVERNANCE_DECISION",
+            "entity_id": decision_id,
+            "action": f"DECISION_{decision.upper()}",
+            "previous_state": {"status": previous_status},
+            "new_state": {"status": new_status, "remarks": remarks},
+            "performed_by_user_id": authority_id,
+            "performed_by_name": "District Authority Official",
+            "performed_by_role": "DISTRICT_AUTHORITY",
+            "district_name": proj.get("district_name", "Pune"),
+            "constituency_name": proj.get("constituency_name", "Pune Constituency"),
+            "created_at": audit_entry["created_at"]
+        })
+
         return {
             "status": "success",
             "message": f"District Authority decision '{decision}' recorded successfully.",
@@ -181,4 +251,7 @@ class GovernanceWorkflowService:
 
     @classmethod
     def get_audit_logs(cls, limit: int = 50) -> List[Dict[str, Any]]:
+        sp_logs = SupabaseClientService.fetch_governance_audit_logs()
+        if sp_logs:
+            return sp_logs[:limit]
         return sorted(cls._audit_logs, key=lambda x: x["created_at"], reverse=True)[:limit]
